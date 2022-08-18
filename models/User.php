@@ -4,6 +4,7 @@ namespace app\models;
 
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
+use yii\db\Expression;
 
 /**
  * User model.
@@ -23,7 +24,8 @@ class User extends ActiveRecord
      */
     public function getSentMessages(): ActiveQuery
     {
-        return $this->hasMany(Message::class, ['from_user_id' => 'id']);
+        return $this
+            ->hasMany(Message::class, ['from_user_id' => 'id']);
     }
 
     /**
@@ -31,6 +33,7 @@ class User extends ActiveRecord
      */
     public function getReceivedMessages(): ActiveQuery
     {
-        return $this->hasMany(Message::class, ['to_user_id' => 'id']);
+        return $this
+            ->hasMany(Message::class, ['to_user_id' => 'id']);
     }
 }

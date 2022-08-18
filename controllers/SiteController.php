@@ -2,60 +2,18 @@
 
 namespace app\controllers;
 
+use app\models\TotalMessagesForm;
+use yii\helpers\Url;
+use yii\httpclient\Client;
 use Yii;
-use yii\filters\AccessControl;
+use yii\base\InvalidRouteException;
+use yii\console\Exception;
 use yii\web\Controller;
-use yii\web\Response;
-use yii\filters\VerbFilter;
-use app\models\LoginForm;
-use app\models\ContactForm;
 
 class SiteController extends Controller
 {
     /**
-     * {@inheritdoc}
-     */
-    public function behaviors()
-    {
-        return [
-            'access' => [
-                'class' => AccessControl::className(),
-                'only' => ['logout'],
-                'rules' => [
-                    [
-                        'actions' => ['logout'],
-                        'allow' => true,
-                        'roles' => ['@'],
-                    ],
-                ],
-            ],
-            'verbs' => [
-                'class' => VerbFilter::className(),
-                'actions' => [
-                    'logout' => ['post'],
-                ],
-            ],
-        ];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function actions()
-    {
-        return [
-            'error' => [
-                'class' => 'yii\web\ErrorAction',
-            ],
-            'captcha' => [
-                'class' => 'yii\captcha\CaptchaAction',
-                'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
-            ],
-        ];
-    }
-
-    /**
-     * Displays homepage.
+     * Displays Homepage.
      *
      * @return string
      */
@@ -65,64 +23,38 @@ class SiteController extends Controller
     }
 
     /**
-     * Login action.
-     *
-     * @return Response|string
-     */
-    public function actionLogin()
-    {
-        if (!Yii::$app->user->isGuest) {
-            return $this->goHome();
-        }
-
-        $model = new LoginForm();
-        if ($model->load(Yii::$app->request->post()) && $model->login()) {
-            return $this->goBack();
-        }
-
-        $model->password = '';
-        return $this->render('login', [
-            'model' => $model,
-        ]);
-    }
-
-    /**
-     * Logout action.
-     *
-     * @return Response
-     */
-    public function actionLogout()
-    {
-        Yii::$app->user->logout();
-
-        return $this->goHome();
-    }
-
-    /**
-     * Displays contact page.
-     *
-     * @return Response|string
-     */
-    public function actionContact()
-    {
-        $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->contact(Yii::$app->params['adminEmail'])) {
-            Yii::$app->session->setFlash('contactFormSubmitted');
-
-            return $this->refresh();
-        }
-        return $this->render('contact', [
-            'model' => $model,
-        ]);
-    }
-
-    /**
-     * Displays about page.
+     * Displays Total Form.
      *
      * @return string
+     * @throws InvalidRouteException|Exception
      */
-    public function actionAbout()
+    public function actionTotalMessagesForm()
     {
-        return $this->render('about');
+        $model = new TotalMessagesForm();
+
+        $data = [];
+        if ($model->load(Yii::$app->request->post())) {
+            $client = new Client(['baseUrl' => Url::base(true)]);
+            $response = $client->createRequest()
+                ->setFormat(Client::FORMAT_JSON)
+                ->setUrl([
+                    'message/total',
+                    'period_start' => $model->period_start,
+                    'period_end' => $model->period_end,
+                    'period_group_unit' => $model->period_group_unit,
+                ])
+                ->send();
+            $response = $response->data;
+            if ($response['error']) {
+                Yii::$app->session->setFlash('error', $response['error']);
+            } else {
+                $data = $response['data'];
+            }
+        }
+
+        return $this->render('total-messages-form', [
+            'model' => $model,
+            'data' => $data,
+        ]);
     }
 }
